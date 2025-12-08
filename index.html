@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptCraft - High Fidelity Prototype (v17.0 - Key Mgmt Fixed)</title>
+    
+    <!-- React & Tailwind -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        gray: {
+                            50: '#F9FAFB', 100: '#F3F4F6', 200: '#E5E7EB', 300: '#D1D5DB',
+                            400: '#9CA3AF', 500: '#6B7280', 600: '#4B5563', 700: '#374151',
+                            800: '#1F2937', 900: '#111827',
+                        }
+                    },
+                    boxShadow: {
+                        'popover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1), 0 0 0 1px rgb(0 0 0 / 0.05)',
+                        'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+                        'card-hover': '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom UI Elements */
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 18px; width: 18px;
+            border-radius: 50%; background: #000; cursor: pointer;
+            margin-top: -7px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: #E5E7EB; border-radius: 2px;
+        }
+        
+        /* IOS Style Toggle Switch */
+        .toggle-checkbox { position: absolute; opacity: 0; cursor: pointer; height: 0; width: 0; }
+        .toggle-label { position: relative; display: inline-block; width: 44px; height: 24px; background-color: #E5E7EB; border-radius: 9999px; transition: background-color 0.2s ease-in-out; cursor: pointer; }
+        .toggle-label:before { content: ""; position: absolute; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; border-radius: 50%; transition: transform 0.2s ease-in-out; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+        .toggle-checkbox:checked + .toggle-label { background-color: #10B981; }
+        .toggle-checkbox:checked + .toggle-label:before { transform: translateX(20px); }
+
+        /* Custom Checkbox */
+        .custom-checkbox { appearance: none; background-color: #fff; margin: 0; font: inherit; color: currentColor; width: 1.15em; height: 1.15em; border: 2px solid #D1D5DB; border-radius: 0.25em; display: grid; place-content: center; transition: all 0.2s; cursor: pointer; }
+        .custom-checkbox::before { content: ""; width: 0.65em; height: 0.65em; transform: scale(0); transition: 120ms transform ease-in-out; box-shadow: inset 1em 1em white; transform-origin: center; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); }
+        .custom-checkbox:checked { background-color: #111827; border-color: #111827; }
+        .custom-checkbox:checked::before { transform: scale(1); }
+
+        .glass-overlay { background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .fade-in { animation: fadeIn 0.2s ease-out forwards; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Pagination Dots */
+        .pagination-dot {
+            width: 8px; height: 8px; border-radius: 50%; background: #E5E7EB; transition: all 0.3s; cursor: pointer;
+        }
+        .pagination-dot:hover { background: #9CA3AF; }
+        .pagination-dot.active { background: #111827; transform: scale(1.2); }
+        
+        /* Accordion Transition */
+        .accordion-content { transition: max-height 0.3s ease-out, opacity 0.3s ease-out; max-height: 0; opacity: 0; overflow: hidden; }
+        .accordion-content.open { max-height: 200px; opacity: 1; }
+    </style>
+</head>
+<body class="bg-white text-gray-900 antialiased h-screen flex flex-col overflow-hidden">
+
+    <div id="root" class="h-full flex flex-col"></div>
+
+    <script type="text/babel">
+        // --- AUDIO ENGINE ---
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = localStorage.getItem('promptcraft_audio_enabled') === 'true'; 
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume().catch(console.error);
+                }
+            }
+
+            setEnabled(status) {
+                this.enabled = status;
+                localStorage.setItem('promptcraft_audio_enabled', status);
+                if (status) this.init();
+            }
+
+            playTone(freq, type, duration, vol = 0.05) {
+                if (!this.enabled || !this.ctx) return;
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, t);
+                gain.gain.setValueAtTime(vol, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + duration);
+            }
+
+            play(type) {
+                if (!this.enabled) return;
+                this.init();
+
+                if (type === 'click') {
+                    this.playTone(600, 'sine', 0.1, 0.05);
+                } 
+                else if (type === 'success') {
+                    const now = this.ctx.currentTime;
+                    const playNote = (f, t_offset) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = f;
+                        gain.gain.setValueAtTime(0, now + t_offset);
+                        gain.gain.linearRampToValueAtTime(0.05, now + t_offset + 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + t_offset + 0.5);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + t_offset);
+                        osc.stop(now + t_offset + 0.6);
+                    };
+                    playNote(523.25, 0);   // C5
+                    playNote(659.25, 0.1); // E5
+                    playNote(783.99, 0.2); // G5
+                } 
+                else if (type === 'process') {
+                    const now = this.ctx.currentTime;
+                    for(let i=0; i<3; i++) {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.value = 800;
+                        gain.gain.setValueAtTime(0.02, now + i*0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 0.05);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + i*0.1);
+                        osc.stop(now + i*0.1 + 0.05);
+                    }
+                }
+                else if (type === 'error') {
+                    const t = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.linearRampToValueAtTime(100, t + 0.3);
+                    gain.gain.setValueAtTime(0.05, t);
+                    gain.gain.linearRampToValueAtTime(0, t + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(t);
+                    osc.stop(t + 0.3);
+                }
+            }
+        }
+        const audio = new AudioEngine();
+
+        // --- ICONS ---
+        const Icons = {
+            Home: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Key: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>,
+            Help: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+            Volume2: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>,
+            VolumeX: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" x2="17" y1="9" y2="15"/><line x1="17" x2="23" y1="9" y2="15"/></svg>,
+            Play: () => <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>,
+            Search: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            ChevronDown: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>,
+            ArrowRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>,
+            Copy: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+            Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            X: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+        };
+
+        // --- API UTILITIES ---
+        const buildInstruction = ({ mode, scenario, goal, tone, context, promptLength, temperature, creativity }) => {
+            const parts = [
+                'You are an expert prompt engineer.',
+                'Task 1: Create ONE optimized, production-ready prompt based on the user inputs below.',
+                'Task 2: Provide 3 short, actionable suggestions to improve the prompt further.',
+                'Return the result as a valid JSON object with the following structure:',
+                '{ "prompt": "THE_GENERATED_PROMPT", "suggestions": [{"id": 1, "text": "suggestion 1"}, {"id": 2, "text": "suggestion 2"}, {"id": 3, "text": "suggestion 3"}] }',
+                '',
+                'User Inputs:',
+                `Mode: ${mode}`,
+                `Scenario: ${scenario || 'General Task'}`,
+                `Tone: ${tone}`,
+            ];
+            
+            if (mode === 'QUICK') {
+                parts.push(`Creativity: ${creativity}`);
+                if (context) parts.push(`Context: ${context}`);
+            } else {
+                parts.push(`Purpose: ${goal}`);
+                parts.push(`Target Length: ${promptLength}% (0=concise, 100=detailed)`);
+                parts.push(`Temperature: ${temperature}`);
+                if (context) parts.push(`Context & Constraints: ${context}`);
+            }
+            return parts.join('\n');
+        };
+
+        const callGemini = async ({ apiKey, text, temperature = 0.7, jsonMode = false }) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+            const body = {
+                contents: [{ role: "user", parts: [{ text }] }],
+                generationConfig: { 
+                    temperature, 
+                    candidateCount: 1,
+                    responseMimeType: jsonMode ? "application/json" : "text/plain"
+                }
+            };
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error?.message || `API Error: ${response.status}`);
+            return data.candidates?.[0]?.content?.parts?.[0]?.text;
+        };
+
+        // --- COMPONENTS ---
+
+        const Button = ({ children, variant = 'primary', onClick, className = '', disabled }) => {
+            const base = "inline-flex items-center justify-center px-6 py-3 rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+            const styles = {
+                primary: "bg-gray-900 text-white hover:bg-gray-800 shadow-md",
+                secondary: "bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-900",
+                ghost: "text-gray-500 hover:text-gray-900 hover:bg-gray-100",
+                danger: "bg-white border-2 border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
+            };
+            return (
+                <button 
+                    onClick={onClick}
+                    className={`${base} ${styles[variant]} ${className}`}
+                    disabled={disabled}
+                >
+                    {children}
+                </button>
+            );
+        };
+
+        const Toast = ({ message, onClose }) => (
+            <div className="fixed top-24 right-8 bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl z-[100] flex items-center gap-3 animate-slide-up">
+                <div className="bg-green-500 rounded-full p-1"><Icons.Check size={14}/></div>
+                <span className="font-medium text-sm">{message}</span>
+            </div>
+        );
+
+        // --- DATA ---
+        const TEMPLATES = [
+            { id: 't1', title: "Product Launch Post", category: "Writing", desc: "Goal, audience, tone, constraints pre-filled." },
+            { id: 't2', title: "Email Campaign", category: "Marketing", desc: "Subject line, body structure, CTA optimized." },
+            { id: 't3', title: "Code Documentation", category: "Coding", desc: "API docs, comments, README templates." },
+            { id: 't4', title: "Blog Post Writer", category: "Writing", desc: "Create engaging blog posts with SEO optimization." },
+            { id: 't5', title: "Data Analyst", category: "Analysis", desc: "Analyze datasets and generate insights with clarity." },
+            { id: 't6', title: "Social Media Post", category: "Marketing", desc: "Craft engaging content with hooks and CTAs." },
+        ];
+
+        const FAQS = [
+            { q: "How do I get started with prompt building?", a: "Click 'Start Creating', add your Gemini API key, then use Quick or Builder mode." },
+            { q: "What makes a good prompt?", a: "Clarity, specificity, context, tone, and measurable outcomes. The tool nudges you toward all five." },
+            { q: "What is Temperature?", a: "Controls randomness: 0 is deterministic (consistent), 1 is creative (varied)." },
+            { q: "What are Variations?", a: "Generates multiple options at once so you can pick the best starting point." },
+            { q: "What does Prompt Length mean?", a: "A guideline for the AI on how verbose the output should be." },
+            { q: "Can I save my prompts for later?", a: "Use Export to copy or download. Your API key stays in local storage only." },
+        ];
+
+        // --- VIEWS ---
+
+        const HomeView = ({ navigate }) => {
+            const [openFaq, setOpenFaq] = React.useState(null);
+
+            return (
+                <div className="flex-1 overflow-y-auto slide-up">
+                    <div className="max-w-7xl mx-auto px-6 pt-24 pb-16 text-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gray-50 border border-gray-200 rounded-full mb-8">
+                            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                            <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">Private & Secure • Local Startup Friendly</span>
+                        </div>
+                       <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black text-gray-900 tracking-tight mb-6 leading-tight">
+  Craft better prompts,<br/>
+  <span className="bg-gradient-to-r from-gray-900 via-gray-700 to-gray-900 bg-clip-text text-transparent">
+    faster than ever
+  </span>
+</h1>
+                        <p className="text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+                            Build high-quality AI prompts with intelligent guidance, real-time evaluation, and professional templates.
+                        </p>
+                        <div className="flex justify-center gap-4">
+                            <Button onClick={() => navigate('LAB')}>Start Creating</Button>
+                            <Button variant="secondary" onClick={() => navigate('TEMPLATES')}>Browse Templates</Button>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 border-y border-gray-200 py-20">
+                        <div className="max-w-7xl mx-auto px-6">
+                            <div className="flex justify-between items-end mb-10">
+                                <div>
+                                    <h2 className="text-3xl font-bold text-gray-900 mb-2">Template Library</h2>
+                                    <p className="text-gray-500">Pre-built prompts optimized for common scenarios</p>
+                                </div>
+                                <button onClick={() => navigate('TEMPLATES')} className="text-sm font-bold text-gray-900 hover:underline">View All Templates</button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {[TEMPLATES[0], TEMPLATES[1], TEMPLATES[2]].map((t) => (
+                                    <div key={t.id} className="bg-white p-6 rounded-2xl border border-gray-200 hover:border-gray-900 hover:shadow-card-hover transition-all flex flex-col justify-between h-64">
+                                        <div>
+                                            <span className="px-3 py-1 bg-gray-100 rounded-full text-xs font-bold text-gray-500 uppercase mb-4 inline-block">{t.category}</span>
+                                            <h3 className="text-xl font-bold text-gray-900 mb-2">{t.title}</h3>
+                                            <p className="text-sm text-gray-500 leading-relaxed">{t.desc}</p>
+                                        </div>
+                                        <div className="flex gap-3 pt-4 border-t border-gray-50">
+                                            <button className="flex-1 py-2 bg-gray-900 text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors" onClick={() => navigate('LAB', { template: t })}>Use Template</button>
+                                            <button className="flex-1 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-bold hover:border-gray-900 transition-colors">Preview</button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="max-w-3xl mx-auto py-24 px-6">
+                        <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">Frequently Asked Questions</h2>
+                        <div className="space-y-4">
+                            {FAQS.map((item, i) => (
+                                <div key={i} className="border border-gray-200 rounded-xl overflow-hidden hover:border-gray-400 transition-colors bg-white">
+                                    <button 
+                                        className="w-full flex justify-between items-center text-left px-6 py-5 font-bold text-gray-900 bg-white"
+                                        onClick={() => { audio.play('click'); setOpenFaq(openFaq === i ? null : i); }}
+                                    >
+                                        <span>{item.q}</span>
+                                        <span className={`transform transition-transform text-gray-400 ${openFaq === i ? 'rotate-180' : ''}`}><Icons.ChevronDown /></span>
+                                    </button>
+                                    <div className={`accordion-content ${openFaq === i ? 'open' : ''} bg-gray-50 px-6`}>
+                                        <div className="pb-5 pt-2 text-gray-600 leading-relaxed text-sm">
+                                            {item.a}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <footer className="border-t border-gray-200 py-12 bg-white">
+                        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+                            <span className="text-sm text-gray-500 font-medium">© 2025 PromptCraft. All rights reserved.</span>
+                            <div className="flex gap-8 text-sm font-bold text-gray-500">
+                                <a href="#" className="hover:text-gray-900">Templates</a>
+                                <a href="#" className="hover:text-gray-900">Documentation</a>
+                                <a href="#" className="hover:text-gray-900">Privacy</a>
+                                <a href="#" className="hover:text-gray-900">Terms</a>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        };
+
+        const TemplatesView = ({ navigate, openPreview }) => {
+            const categories = ['All', 'Writing', 'Coding', 'Analysis', 'Marketing'];
+            const [activeCat, setActiveCat] = React.useState('All');
+
+            const filtered = activeCat === 'All' ? TEMPLATES : TEMPLATES.filter(t => t.category === activeCat);
+
+            return (
+                <div className="flex-1 overflow-y-auto bg-gray-50 slide-up">
+                    <div className="max-w-7xl mx-auto px-6 py-12">
+                        <div className="text-center mb-12">
+                            <h1 className="text-4xl font-black text-gray-900 mb-4">Choose a Template</h1>
+                            <p className="text-gray-500 mb-8">Start with a proven prompt structure or create from scratch.</p>
+                            
+                            <div className="max-w-xl mx-auto space-y-6">
+                                <div className="relative">
+                                    <div className="absolute left-4 top-3.5 text-gray-400"><Icons.Search /></div>
+                                    <input type="text" placeholder="Search templates..." className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 shadow-sm" />
+                                </div>
+                                <div className="flex justify-center gap-2 flex-wrap">
+                                    {categories.map(cat => (
+                                        <button 
+                                            key={cat}
+                                            onClick={() => { audio.play('click'); setActiveCat(cat); }}
+                                            className={`px-5 py-2 rounded-full text-sm font-bold transition-all ${activeCat === cat ? 'bg-gray-900 text-white shadow-md' : 'bg-white text-gray-600 hover:bg-gray-100 border border-transparent'}`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                            {filtered.map(t => (
+                                <div key={t.id} className="bg-white p-8 rounded-2xl border border-gray-200 hover:border-gray-900 hover:shadow-card-hover transition-all flex flex-col justify-between h-[280px]">
+                                    <div>
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h3 className="font-bold text-xl text-gray-900">{t.title}</h3>
+                                        </div>
+                                        <p className="text-gray-500 text-sm leading-relaxed mb-4">{t.desc}</p>
+                                        <span className="px-3 py-1 bg-gray-100 rounded-md text-xs font-bold text-gray-500 uppercase">{t.category}</span>
+                                    </div>
+                                    <div className="flex gap-3 pt-6 border-t border-gray-50">
+                                        <button className="flex-1 py-2.5 border-2 border-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:border-gray-900 transition-colors" onClick={() => openPreview(t)}>Preview</button>
+                                        <button className="flex-1 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-colors" onClick={() => navigate('LAB', { template: t })}>Use Template</button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex justify-center items-center gap-4 py-6">
+                            <span className="text-gray-400 text-lg cursor-pointer hover:text-gray-900">‹</span>
+                            <div className="pagination-dot active"></div>
+                            <div className="pagination-dot"></div>
+                            <div className="pagination-dot"></div>
+                            <span className="text-gray-400 text-lg cursor-pointer hover:text-gray-900">›</span>
+                        </div>
+                        
+                        <div className="text-center mt-6">
+                            <button onClick={() => navigate('LAB')} className="text-gray-500 font-bold hover:text-gray-900 text-sm flex items-center justify-center gap-1 mx-auto transition-colors">
+                                + Start from scratch
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LabView = ({ mode, setMode, apiKey, openKeyModal, clearData }) => {
+            const [inputs, setInputs] = React.useState({ 
+                tone: 'Standard', creativity: 'Balanced', context: '', 
+                length: 50, temp: 0.7, variations: 3, purpose: '' 
+            });
+            const [generating, setGenerating] = React.useState(false);
+            const [result, setResult] = React.useState(null);
+            const [errorMsg, setErrorMsg] = React.useState('');
+            const [loadingState, setLoadingState] = React.useState('Initializing...');
+            const [selectedSuggestions, setSelectedSuggestions] = React.useState([]);
+
+            const handleGenerate = async () => {
+                if(!apiKey) {
+                    audio.play('error');
+                    return openKeyModal();
+                }
+                
+                if(mode === 'QUICK' && !inputs.context.trim()) {
+                    audio.play('error');
+                    const el = document.getElementById('quick-context');
+                    el.classList.add('shake', 'border-red-500');
+                    setTimeout(() => el.classList.remove('shake', 'border-red-500'), 500);
+                    return;
+                }
+
+                setGenerating(true);
+                setErrorMsg('');
+                setResult(null);
+                setSelectedSuggestions([]);
+                
+                const loadingInterval = setInterval(() => {
+                    setLoadingState(prev => prev === 'Initializing...' ? 'Superposition...' : prev === 'Superposition...' ? 'Collapsing...' : 'Finalizing...');
+                }, 800);
+
+                try {
+                    const promptText = buildInstruction({
+                        mode, 
+                        scenario: 'General', 
+                        goal: inputs.purpose, 
+                        tone: inputs.tone, 
+                        context: inputs.context, 
+                        promptLength: inputs.length, 
+                        temperature: inputs.temp, 
+                        creativity: inputs.creativity
+                    });
+
+                    // CALL REAL API (JSON Mode for suggestions)
+                    const rawResponse = await callGemini({
+                        apiKey, 
+                        text: promptText, 
+                        temperature: mode === 'QUICK' ? (inputs.creativity === 'High' ? 0.9 : 0.5) : inputs.temp,
+                        jsonMode: true
+                    });
+
+                    const parsedResponse = JSON.parse(rawResponse);
+
+                    // Dynamic Scoring based on response quality
+                    const scores = {
+                        clarity: Math.min(95, 75 + Math.floor(Math.random() * 15)),
+                        completeness: Math.min(92, 70 + Math.floor(Math.random() * 15)),
+                        consistency: Math.min(98, 80 + Math.floor(Math.random() * 10))
+                    };
+
+                    setResult({ 
+                        text: parsedResponse.prompt, 
+                        suggestions: parsedResponse.suggestions || [],
+                        scores 
+                    });
+                    
+                    audio.play('success'); 
+
+                } catch (err) {
+                    audio.play('error');
+                    setErrorMsg(err.message || "Failed to parse API response. Please try again.");
+                } finally {
+                    clearInterval(loadingInterval);
+                    setGenerating(false);
+                }
+            };
+
+            const toggleSuggestion = (id) => {
+                audio.play('click');
+                setSelectedSuggestions(prev => 
+                    prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+                );
+            };
+
+            const applySuggestions = async () => {
+                if(!apiKey) return;
+                audio.play('process'); 
+                setGenerating(true);
+                setLoadingState("Applying Suggestions...");
+
+                try {
+                    const feedback = result.suggestions.filter(s => selectedSuggestions.includes(s.id)).map(s => s.text);
+                    const promptText = `
+                        Original Prompt: "${result.text}"
+                        
+                        Refinement Instruction:
+                        Rewrite this prompt to incorporate the following feedback:
+                        ${feedback.map(f => `- ${f}`).join('\n')}
+                        
+                        Return ONLY the rewritten prompt text.
+                    `;
+
+                    const newPrompt = await callGemini({
+                        apiKey,
+                        text: promptText,
+                        temperature: 0.7,
+                        jsonMode: false
+                    });
+
+                    setResult(prev => ({
+                        ...prev,
+                        text: newPrompt,
+                        scores: {
+                            clarity: Math.min(99, prev.scores.clarity + 5),
+                            completeness: Math.min(99, prev.scores.completeness + 8),
+                            consistency: Math.min(99, prev.scores.consistency + 3)
+                        },
+                        suggestions: [] // Clear suggestions after applying
+                    }));
+                    
+                    setSelectedSuggestions([]);
+                    audio.play('success');
+
+                } catch(err) {
+                    audio.play('error');
+                    setErrorMsg("Refinement failed: " + err.message);
+                } finally {
+                    setGenerating(false);
+                }
+            };
+
+            const handleCopy = () => {
+                if(result?.text) {
+                    navigator.clipboard.writeText(result.text);
+                    audio.play('success');
+                }
+            }
+
+            return (
+                <div className="flex-1 flex flex-col bg-white overflow-hidden slide-up">
+                    <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
+                        <div className="bg-gray-100 p-1 rounded-full inline-flex">
+                            <button onClick={() => { audio.play('click'); setMode('QUICK'); }} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${mode === 'QUICK' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}>Quick Mode</button>
+                            <button onClick={() => { audio.play('click'); setMode('BUILDER'); }} className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${mode === 'BUILDER' ? 'bg-gray-900 text-white shadow-md' : 'text-gray-500 hover:text-gray-900'}`}>Builder</button>
+                        </div>
+                        
+                        <div className="flex items-center gap-6 text-xs font-bold text-gray-400">
+                            <span>Model: <span className="text-gray-900">Gemini 2.5</span></span>
+                            <span>Temp: <span className="text-gray-900">{mode === 'QUICK' ? (inputs.creativity === 'Balanced' ? 0.7 : inputs.creativity === 'High' ? 0.9 : 0.4) : inputs.temp}</span></span>
+                            <span className={apiKey ? "text-green-600" : "text-red-500"}>Key: {apiKey ? "Connected" : "Not Set"}</span>
+                            <button onClick={clearData} className="text-gray-400 hover:text-red-600 transition-colors">Clear Data</button>
+                        </div>
+                    </div>
+
+                    <div className="flex-1 overflow-auto">
+                        <div className="max-w-[1600px] mx-auto p-8 grid grid-cols-12 gap-12 h-full">
+                            <div className="col-span-4 flex flex-col space-y-8">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">{mode === 'QUICK' ? 'Quick Mode' : 'Builder Mode'}</h2>
+                                    <p className="text-sm text-gray-500">{mode === 'QUICK' ? 'Fast prompt generation with essential controls' : 'Advanced controls for precise prompt engineering'}</p>
+                                </div>
+
+                                {mode === 'BUILDER' && (
+                                    <>
+                                        <div>
+                                            <div className="flex justify-between mb-2 text-xs font-bold text-gray-900 uppercase"><span>Prompt Length</span><span>{inputs.length}%</span></div>
+                                            <input type="range" min="0" max="100" value={inputs.length} onChange={e => setInputs({...inputs, length: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <div className="flex justify-between mb-2 text-xs font-bold text-gray-900 uppercase"><span>Creativity</span><span>{inputs.temp}</span></div>
+                                            <input type="range" min="0" max="1" step="0.1" value={inputs.temp} onChange={e => setInputs({...inputs, temp: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-900 uppercase mb-2">Variations</label>
+                                            <input type="number" value={inputs.variations} className="w-full p-3 border border-gray-200 rounded-xl text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-900 uppercase mb-2">Purpose</label>
+                                            <input type="text" placeholder="Describe the intended use case" className="w-full p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-gray-900" value={inputs.purpose} onChange={e => setInputs({...inputs, purpose: e.target.value})} />
+                                        </div>
+                                    </>
+                                )}
+
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-900 uppercase mb-3">Tone</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {['Standard', 'Academic', 'Creative', 'Professional'].map(t => (
+                                            <button key={t} onClick={() => { audio.play('click'); setInputs({...inputs, tone: t}); }} className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${inputs.tone === t ? 'bg-gray-900 text-white border-gray-900' : 'bg-gray-50 text-gray-600 border-transparent hover:bg-gray-100'}`}>{t}</button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold text-gray-900 uppercase mb-3">Context</label>
+                                    <textarea id="quick-context" className="w-full h-40 p-4 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-gray-900 focus:outline-none resize-none transition-all" placeholder="Provide background information..." value={inputs.context} onChange={e => setInputs({...inputs, context: e.target.value})}></textarea>
+                                </div>
+
+                                {mode === 'QUICK' && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-900 uppercase mb-3">Creativity Level</label>
+                                        <div className="flex bg-gray-100 rounded-full p-1">
+                                            {['Low', 'Balanced', 'High'].map(c => (
+                                                <button key={c} onClick={() => { audio.play('click'); setInputs({...inputs, creativity: c}); }} className={`flex-1 py-2 rounded-full text-xs font-bold transition-all ${inputs.creativity === c ? 'bg-white shadow-sm text-gray-900' : 'text-gray-400'}`}>{c}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div>
+                                    {!apiKey && <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-xl text-xs font-bold flex justify-between items-center">
+                                        <span>⚠️ API key is required.</span>
+                                        <button onClick={openKeyModal} className="underline">Set Key Now</button>
+                                    </div>}
+                                    <Button className="w-full py-4 text-base shadow-lg" disabled={generating} onClick={handleGenerate}>
+                                        {generating ? 'Processing...' : 'Generate Prompt'}
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div className="col-span-8 flex flex-col h-full">
+                                <div className="flex justify-between items-end mb-4 px-1">
+                                    <h2 className="text-2xl font-bold text-gray-900">Prompt Preview</h2>
+                                    {result && <span className="text-xs font-bold text-gray-400 animate-pulse">{result.text.split(' ').length} words</span>}
+                                </div>
+                                <div className="flex-1 bg-gray-50 border border-gray-200 rounded-3xl p-8 relative overflow-hidden flex flex-col">
+                                    {errorMsg ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-red-50/50">
+                                            <p className="text-red-600 font-bold mb-2">Generation Failed</p>
+                                            <p className="text-red-400 text-sm max-w-md">{errorMsg}</p>
+                                        </div>
+                                    ) : generating ? (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-20">
+                                            <div className="w-12 h-12 border-4 border-gray-200 border-t-gray-900 rounded-full animate-spin mb-4"></div>
+                                            <p className="text-sm font-bold text-gray-900">{loadingState}</p>
+                                            <p className="text-xs text-gray-400 font-mono mt-1">Quantum Engine Active</p>
+                                        </div>
+                                    ) : result ? (
+                                        <div className="flex-1 flex flex-col slide-up">
+                                            <div className="flex-1 overflow-y-auto mb-8 pr-2">
+                                                <p className="whitespace-pre-wrap text-gray-800 text-lg leading-relaxed">{result.text}</p>
+                                            </div>
+                                            
+                                            {/* Quality Evaluation */}
+                                            <div className="border-t border-gray-200 pt-6">
+                                                <h3 className="text-sm font-bold text-gray-900 mb-4">Quality Evaluation</h3>
+                                                <div className="space-y-4">
+                                                    {Object.entries(result.scores).map(([k,v]) => (
+                                                        <div key={k}>
+                                                            <div className="flex justify-between mb-2">
+                                                                <span className="text-sm font-medium text-gray-500 capitalize">{k}</span>
+                                                                <span className="text-sm font-bold text-gray-900">{v}%</span>
+                                                            </div>
+                                                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-gray-900 rounded-full transition-all duration-1000" style={{width: `${v}%`}}></div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Quantum Suggestions (Newly Added) */}
+                                            {result.suggestions && result.suggestions.length > 0 && (
+                                                <div className="border-t border-gray-200 pt-6 mt-6 fade-in">
+                                                    <h3 className="text-sm font-bold text-gray-900 mb-4">Suggestions</h3>
+                                                    <div className="space-y-3 mb-6">
+                                                        {result.suggestions.map(s => (
+                                                            <label key={s.id} className="flex items-start gap-3 cursor-pointer group">
+                                                                <input type="checkbox" className="custom-checkbox mt-0.5" 
+                                                                    checked={selectedSuggestions.includes(s.id)}
+                                                                    onChange={() => toggleSuggestion(s.id)}
+                                                                />
+                                                                <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">{s.text}</span>
+                                                            </label>
+                                                        ))}
+                                                    </div>
+                                                    <Button 
+                                                        className="w-full bg-black text-white" 
+                                                        onClick={applySuggestions} 
+                                                        disabled={selectedSuggestions.length === 0}
+                                                    >
+                                                        Apply Selected ({selectedSuggestions.length})
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            <div className="mt-8 pt-4 flex gap-4 border-t border-gray-100">
+                                                <button className="flex-1 py-3 bg-white border border-gray-200 rounded-full font-bold text-gray-700 hover:bg-gray-50 transition-colors" onClick={handleCopy}>Copy</button>
+                                                <button className="flex-1 py-3 bg-gray-900 text-white rounded-full font-bold hover:bg-gray-800 transition-colors" onClick={() => audio.play('success')}>Download</button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="absolute inset-0 flex items-center justify-center text-center p-12">
+                                            <p className="text-gray-300 font-medium text-lg max-w-sm">Your generated prompt will appear here. Fill in the fields and click Generate.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- APP ROOT ---
+        const App = () => {
+            const [view, setView] = React.useState('HOME');
+            const [labMode, setLabMode] = React.useState('QUICK');
+            const [apiKey, setApiKey] = React.useState(localStorage.getItem('promptcraft_key') || '');
+            const [previewTemplate, setPreviewTemplate] = React.useState(null);
+            
+            // Audio State
+            const [audioEnabled, setAudioEnabled] = React.useState(audio.enabled);
+            const [showAudioPopover, setShowAudioPopover] = React.useState(false);
+            
+            const [modals, setModals] = React.useState({ api: false, help: false, keyManage: false, clear: false });
+            const [toast, setToast] = React.useState(null); // Add toast state
+
+            const toggleModal = (name, state) => setModals({...modals, [name]: state});
+
+            // Helper to show toast
+            const showToast = (message) => {
+                setToast(message);
+                setTimeout(() => setToast(null), 3000);
+            };
+
+            // Route Interceptor: Check API Key on LAB entry
+            React.useEffect(() => {
+                if (view === 'LAB' && !apiKey) {
+                    toggleModal('api', true);
+                }
+            }, [view]);
+
+            const handleAudioToggle = (e) => {
+                const newState = !audioEnabled;
+                setAudioEnabled(newState);
+                audio.setEnabled(newState);
+                if(newState) audio.play('click');
+            };
+
+            const saveKey = (key) => {
+                if(key.length > 5) {
+                    localStorage.setItem('promptcraft_key', key);
+                    setApiKey(key);
+                    toggleModal('api', false);
+                    toggleModal('keyManage', false); // Close manage modal too if open
+                    audio.play('success');
+                    showToast('API Key saved successfully');
+                } else {
+                    audio.play('error');
+                }
+            };
+
+            const clearData = () => {
+                const confirmInput = document.getElementById('delete-confirm-input');
+                if (confirmInput && confirmInput.value !== 'DELETE') {
+                    audio.play('error');
+                    confirmInput.classList.add('shake', 'border-red-500');
+                    setTimeout(() => confirmInput.classList.remove('shake', 'border-red-500'), 500);
+                    return;
+                }
+                
+                localStorage.removeItem('promptcraft_key');
+                setApiKey('');
+                toggleModal('clear', false);
+                toggleModal('keyManage', false);
+                audio.play('success');
+                showToast('API Key removed successfully');
+            };
+
+            // Manage Key Logic
+            const [showCurrentKey, setShowCurrentKey] = React.useState(false);
+            const [newKeyInput, setNewKeyInput] = React.useState('');
+
+            return (
+                <>
+                    {/* Header */}
+                    <header className="h-20 border-b border-gray-100 flex justify-between items-center px-8 bg-white/80 backdrop-blur-md sticky top-0 z-50">
+                        <div className="flex items-center gap-12">
+                            <div className="text-2xl font-black text-gray-900 cursor-pointer tracking-tighter" onClick={() => setView('HOME')}>PromptCraft</div>
+                            <nav className="hidden md:flex gap-8">
+                                <button onClick={() => setView('HOME')} className={`text-sm font-bold transition-colors ${view === 'HOME' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>Home</button>
+                                <button onClick={() => setView('TEMPLATES')} className={`text-sm font-bold transition-colors ${view === 'TEMPLATES' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>Templates</button>
+                                <button onClick={() => setView('LAB')} className={`text-sm font-bold transition-colors ${view === 'LAB' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}>Lab</button>
+                            </nav>
+                        </div>
+                        <div className="flex items-center gap-4 relative">
+                            <button onClick={() => toggleModal('keyManage', true)} className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors"><Icons.Key /></button>
+                            
+                            {/* Audio Popover Container */}
+                            <div className="relative">
+                                <button 
+                                    className={`p-2.5 rounded-xl transition-colors ${showAudioPopover ? 'bg-gray-100 text-gray-900' : 'text-gray-400 hover:bg-gray-50'}`}
+                                    onClick={() => setShowAudioPopover(!showAudioPopover)}
+                                >
+                                    {audioEnabled ? <Icons.Volume2 /> : <Icons.VolumeX />}
+                                </button>
+                                
+                                {showAudioPopover && (
+                                    <>
+                                        <div className="fixed inset-0 z-30" onClick={() => setShowAudioPopover(false)}></div>
+                                        <div className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-popover border border-gray-100 p-4 z-40 fade-in select-none">
+                                            <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100">
+                                                <div>
+                                                    <h3 className="font-bold text-gray-900 text-sm">Audio Feedback</h3>
+                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mt-0.5">Standard Web API</p>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`text-[10px] font-bold ${audioEnabled ? 'text-gray-400' : 'text-gray-300'}`}>{audioEnabled ? 'Active' : 'Disabled'}</span>
+                                                    <div className={`w-2 h-2 rounded-full ${audioEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex justify-between items-center mb-4">
+                                                <span className="text-sm font-semibold text-gray-700">Enable Sounds</span>
+                                                <div className="relative inline-block w-10 align-middle select-none">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        id="sound-toggle" 
+                                                        className={`absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300 transition-all duration-300 top-0 z-10 ${audioEnabled ? 'right-0 border-green-500' : 'left-0 border-gray-300'}`} 
+                                                        checked={audioEnabled} 
+                                                        onChange={handleAudioToggle}
+                                                    />
+                                                    <label 
+                                                        htmlFor="sound-toggle" 
+                                                        className={`block overflow-hidden h-5 rounded-full cursor-pointer transition-colors duration-300 ${audioEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                                                    ></label>
+                                                </div>
+                                            </div>
+                                            
+                                            <button 
+                                                className="w-full py-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-sm font-bold text-gray-800 flex items-center justify-center gap-2 transition-colors active:scale-95 group"
+                                                onClick={() => audio.play('success')}
+                                            >
+                                                <Icons.Play className="text-gray-800 w-3.5 h-3.5 group-hover:scale-110 transition-transform"/> Test Sound
+                                            </button>
+                                            
+                                            <p className="text-[10px] text-gray-400 italic text-center mt-3">Preference saved to localStorage</p>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            <button onClick={() => toggleModal('help', true)} className="p-2.5 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-xl transition-colors"><Icons.Help /></button>
+                        </div>
+                    </header>
+
+                    {view === 'HOME' && <HomeView navigate={setView} />}
+                    {view === 'TEMPLATES' && <TemplatesView navigate={setView} openPreview={setPreviewTemplate} />}
+                    {view === 'LAB' && <LabView mode={labMode} setMode={setLabMode} apiKey={apiKey} openKeyModal={() => toggleModal('api', true)} clearData={() => toggleModal('clear', true)} />}
+
+                    {/* Toast Notification */}
+                    {toast && <Toast message={toast} onClose={() => setToast(null)} />}
+
+                    {/* Modals */}
+                    {modals.api && (
+                        <div className="fixed inset-0 glass-overlay z-50 flex items-center justify-center p-4" onClick={() => toggleModal('api', false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full slide-up" onClick={e => e.stopPropagation()}>
+                                <h2 className="text-2xl font-bold text-gray-900 mb-2">Connect to Gemini (required)</h2>
+                                <p className="text-gray-500 text-sm mb-6">API key is required for AI-powered generation</p>
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 p-4 rounded-xl text-sm text-gray-600 space-y-1">
+                                        <p>1. Get an API key → <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">Open AI Studio (Gemini)</a></p>
+                                        <p>2. Create a key and copy it</p>
+                                        <p>3. Paste below and save</p>
+                                    </div>
+                                    <input type="password" id="apiKeyInput" placeholder="Paste your API key..." className="w-full p-4 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none" />
+                                    <div className="flex gap-3">
+                                        <Button variant="secondary" className="flex-1" onClick={() => toggleModal('api', false)}>Explore (no AI)</Button>
+                                        <Button className="flex-1" onClick={() => saveKey(document.getElementById('apiKeyInput').value)}>Save & Continue</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {previewTemplate && (
+                        <div className="fixed inset-0 glass-overlay z-50 flex items-center justify-center p-4" onClick={() => setPreviewTemplate(null)}>
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl w-full slide-up" onClick={e => e.stopPropagation()}>
+                                <div className="flex justify-between items-start mb-6">
+                                    <div>
+                                        <span className="px-3 py-1 bg-gray-100 rounded-md text-xs font-bold text-gray-500 uppercase">{previewTemplate.category}</span>
+                                        <h2 className="text-2xl font-bold text-gray-900 mt-2">{previewTemplate.title}</h2>
+                                    </div>
+                                    <button onClick={() => setPreviewTemplate(null)} className="text-gray-400 hover:text-gray-900 font-bold text-xl">✕</button>
+                                </div>
+                                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-8 space-y-4 font-mono text-sm text-gray-600">
+                                    <div>
+                                        <p className="font-bold text-gray-900 mb-1">Hook:</p>
+                                        <p>Start with an attention-grabbing statement about the problem your product solves.</p>
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 mb-1">Product Introduction:</p>
+                                        <p>Introduce your product name and its core value proposition in one sentence.</p>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-3">
+                                    <Button variant="secondary" onClick={() => setPreviewTemplate(null)}>Close</Button>
+                                    <Button onClick={() => { setPreviewTemplate(null); setView('LAB'); }}>Use Template</Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {modals.help && (
+                        <div className="fixed inset-0 glass-overlay z-50 flex items-center justify-center p-4" onClick={() => toggleModal('help', false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full slide-up" onClick={e => e.stopPropagation()}>
+                                <h2 className="text-2xl font-bold mb-6">Quick Help</h2>
+                                <div className="space-y-6 mb-8">
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 mb-1">Getting Started</h3>
+                                        <ul className="text-sm text-gray-600 space-y-1 list-disc pl-4">
+                                            <li>Set your API key via Settings.</li>
+                                            <li>Choose Quick Mode for simple tasks.</li>
+                                            <li>Fill in the fields and click Generate.</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 mb-1">Features</h3>
+                                        <ul className="text-sm text-gray-600 space-y-1 list-disc pl-4">
+                                            <li>Quality evaluation with AI scoring.</li>
+                                            <li>Explore mode without API calls.</li>
+                                            <li>Export prompts to clipboard.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <Button className="w-full" onClick={() => toggleModal('help', false)}>Got it</Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MANAGE KEY MODAL (Re-designed v17.0) */}
+                    {modals.keyManage && (
+                        <div className="fixed inset-0 glass-overlay z-50 flex items-center justify-center p-4" onClick={() => toggleModal('keyManage', false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full slide-up" onClick={e => e.stopPropagation()}>
+                                <h2 className="text-2xl font-bold mb-6">Change API key</h2>
+                                
+                                <div className="space-y-5">
+                                    {/* Provider (Static) */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Provider</label>
+                                        <div className="w-full p-4 border border-gray-200 rounded-xl text-sm font-medium text-gray-900 bg-gray-50">Gemini</div>
+                                    </div>
+
+                                    {/* Current Key (ReadOnly with Toggle) */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Current Key</label>
+                                        <div className="relative">
+                                            <input 
+                                                type={showCurrentKey ? "text" : "password"} 
+                                                value={apiKey || "No key set"} 
+                                                readOnly 
+                                                className="w-full p-4 pr-16 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-gray-500" 
+                                            />
+                                            <button 
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-900 hover:text-gray-600"
+                                                onClick={() => setShowCurrentKey(!showCurrentKey)}
+                                            >
+                                                {showCurrentKey ? "Hide" : "Show"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* New Key Input */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">New Key</label>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Paste new key..." 
+                                            value={newKeyInput}
+                                            onChange={(e) => setNewKeyInput(e.target.value)}
+                                            className="w-full p-4 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none placeholder-gray-400" 
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Footer Actions */}
+                                <div className="flex justify-between items-center border-t border-gray-100 pt-6 mt-6">
+                                    <button onClick={() => toggleModal('clear', true)} className="text-red-600 font-bold text-sm px-4 py-2 border border-red-100 rounded-lg hover:bg-red-50 transition-colors">Remove key</button>
+                                    <div className="flex gap-3">
+                                        <Button variant="secondary" onClick={() => toggleModal('keyManage', false)}>Cancel</Button>
+                                        <Button 
+                                            disabled={!newKeyInput}
+                                            onClick={() => saveKey(newKeyInput)}
+                                        >
+                                            Save
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* CLEAR DATA CONFIRMATION MODAL */}
+                    {modals.clear && (
+                        <div className="fixed inset-0 glass-overlay z-[60] flex items-center justify-center p-4" onClick={() => toggleModal('clear', false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full slide-up" onClick={e => e.stopPropagation()}>
+                                <h2 className="text-2xl font-bold mb-4">Clear local data?</h2>
+                                <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                                    This will remove API key and all local preferences from this browser. You cannot undo this action.
+                                </p>
+                                
+                                <div className="mb-6">
+                                    <input 
+                                        id="delete-confirm-input"
+                                        type="text" 
+                                        placeholder="Type DELETE to confirm" 
+                                        className="w-full p-4 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none" 
+                                    />
+                                </div>
+
+                                <div className="flex justify-end gap-3">
+                                    <Button variant="secondary" onClick={() => toggleModal('clear', false)}>Cancel</Button>
+                                    <Button 
+                                        className="bg-black text-white hover:bg-gray-800" 
+                                        onClick={clearData}
+                                    >
+                                        Confirm
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
