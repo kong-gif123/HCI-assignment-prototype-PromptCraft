@@ -3,7 +3,10 @@ Local-first prompt builder with real-time quality scoring and BYOK LLM generatio
 
 Abstract
 
-PromptCraft is a web-based single-page app (SPA) built to reduce the learning curve of prompt engineering and make results more predictable in generative AI workflows. It combines structured guidance (turning “messy ideas” into clear prompt fields) with real-time heuristic evaluation (instant quality scores and suggestions).
-With the Google Gemini API, PromptCraft can turn natural language input into a structured prompt. It also includes a simulated quantum-inspired selection algorithm to explore multiple prompt variants and pick a higher-quality version. The project follows a local-first approach to support privacy and fast interaction.
+This repository contains the front-end implementation of PromptCraft delivered as a high-fidelity alpha build. In the course context, it serves as the “beta (code submission)” because it is the runnable coded deliverable; however, the system is implemented as a browser-based application without a dedicated backend. The current build completes client-side UI rendering (HTML/CSS/JavaScript), integrates audio and animation feedback using HTML5 Audio/Web Audio and CSS/Web Animations, supports Gemini API request/response rendering for prompt optimization, and includes a quantum-inspired local parallel analysis module to evaluate prompt quality on-device.
 
-This prototype is an alpha version built to demonstrate HCI principles. It has no backend, and the API key is provided by the user and stored locally.
+Entry points 
+
+The repository provides two HTML entry pages for assessment and demonstration. The lab page (visual and audio API test.html) is a standalone implementation focusing on the sound and animation API requirements: users can toggle audio via the sound button at the top-right of the header, and the animation feedback is rendered synchronously to make the interaction observable. The main entry (index.html) presents the complete PromptCraft interactive prototype described in the report, allowing users to experience the end-to-end workflow including the landing page, template library, Gemini API call and optimized prompt rendering, sound control, and clearing locally stored records.
+
+Scope note: this project intentionally runs fully in the browser and does not include a backend service. All interactions, rendering, and local analysis are performed client-side, while Gemini functionality is accessed via API calls from the front end as documented in the report.
