@@ -3,21 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PromptCraft - High Fidelity Prototype (v17.0 - Key Mgmt Fixed)</title>
+    <title>PromptCraft - High Fidelity Prototype (v17.1 - Fixed)</title>
     
-    <!-- React & Tailwind -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
-    <!-- Config -->
     <script>
         tailwind.config = {
             theme: {
@@ -246,6 +242,7 @@
         };
 
         const callGemini = async ({ apiKey, text, temperature = 0.7, jsonMode = false }) => {
+            // UPDATED: Use gemini-3
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
             const body = {
                 contents: [{ role: "user", parts: [{ text }] }],
@@ -264,7 +261,15 @@
             
             const data = await response.json();
             if (!response.ok) throw new Error(data.error?.message || `API Error: ${response.status}`);
-            return data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            let resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            
+            // CLEANUP: Handle Markdown JSON blocks if present
+            if (jsonMode && resultText) {
+                resultText = resultText.replace(/```json|```/g, '').trim();
+            }
+            
+            return resultText;
         };
 
         // --- COMPONENTS ---
@@ -623,7 +628,7 @@
                         </div>
                         
                         <div className="flex items-center gap-6 text-xs font-bold text-gray-400">
-                            <span>Model: <span className="text-gray-900">Gemini 2.5</span></span>
+                            <span>Model: <span className="text-gray-900">Gemini 3</span></span>
                             <span>Temp: <span className="text-gray-900">{mode === 'QUICK' ? (inputs.creativity === 'Balanced' ? 0.7 : inputs.creativity === 'High' ? 0.9 : 0.4) : inputs.temp}</span></span>
                             <span className={apiKey ? "text-green-600" : "text-red-500"}>Key: {apiKey ? "Connected" : "Not Set"}</span>
                             <button onClick={clearData} className="text-gray-400 hover:text-red-600 transition-colors">Clear Data</button>
@@ -793,7 +798,8 @@
             const [modals, setModals] = React.useState({ api: false, help: false, keyManage: false, clear: false });
             const [toast, setToast] = React.useState(null); // Add toast state
 
-            const toggleModal = (name, state) => setModals({...modals, [name]: state});
+            // FIXED: Using functional updates to prevent batching overrides
+            const toggleModal = (name, state) => setModals(prev => ({...prev, [name]: state}));
 
             // Helper to show toast
             const showToast = (message) => {
@@ -815,12 +821,18 @@
                 if(newState) audio.play('click');
             };
 
+            // FIXED: Use Ref for API Key Input to avoid document.getElementById
+            const apiKeyInputRef = React.useRef(null);
+
             const saveKey = (key) => {
-                if(key.length > 5) {
+                if(key && key.length > 5) {
                     localStorage.setItem('promptcraft_key', key);
                     setApiKey(key);
+                    
+                    // These will now work correctly due to functional state updates
                     toggleModal('api', false);
-                    toggleModal('keyManage', false); // Close manage modal too if open
+                    toggleModal('keyManage', false); 
+                    
                     audio.play('success');
                     showToast('API Key saved successfully');
                 } else {
@@ -941,10 +953,16 @@
                                         <p>2. Create a key and copy it</p>
                                         <p>3. Paste below and save</p>
                                     </div>
-                                    <input type="password" id="apiKeyInput" placeholder="Paste your API key..." className="w-full p-4 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none" />
+                                    {/* FIXED: Use Ref */}
+                                    <input 
+                                        ref={apiKeyInputRef}
+                                        type="password" 
+                                        placeholder="Paste your API key..." 
+                                        className="w-full p-4 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none" 
+                                    />
                                     <div className="flex gap-3">
                                         <Button variant="secondary" className="flex-1" onClick={() => toggleModal('api', false)}>Explore (no AI)</Button>
-                                        <Button className="flex-1" onClick={() => saveKey(document.getElementById('apiKeyInput').value)}>Save & Continue</Button>
+                                        <Button className="flex-1" onClick={() => saveKey(apiKeyInputRef.current?.value)}>Save & Continue</Button>
                                     </div>
                                 </div>
                             </div>
