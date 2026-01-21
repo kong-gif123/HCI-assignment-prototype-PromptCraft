@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PromptCraft - High Fidelity Prototype (v17.1 - Fixed)</title>
+    <title>PromptCraft - High Fidelity Prototype (v17.3 - Figma UI)</title>
     
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -41,15 +41,38 @@
 
     <style>
         /* Custom UI Elements */
-        input[type=range] { -webkit-appearance: none; background: transparent; }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 18px; width: 18px;
-            border-radius: 50%; background: #000; cursor: pointer;
-            margin-top: -7px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        /* Updated Slider Styling to match Figma */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent; /* Handled by inline style for progress */
         }
+        input[type=range]:focus {
+            outline: none;
+        }
+        
+        /* Thumb Style */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #000000;
+            cursor: pointer;
+            margin-top: -8px; /* (Track height 4px - Thumb height 20px) / 2 */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        /* Track Style - Base style, color is handled inline for progress effect */
         input[type=range]::-webkit-slider-runnable-track {
-            width: 100%; height: 4px; cursor: pointer;
-            background: #E5E7EB; border-radius: 2px;
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            border-radius: 999px;
+            /* Background is set inline in React */
         }
         
         /* IOS Style Toggle Switch */
@@ -242,8 +265,8 @@
         };
 
         const callGemini = async ({ apiKey, text, temperature = 0.7, jsonMode = false }) => {
-            // UPDATED: Use gemini-3
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+            // FIXED: Use gemini-1.5-flash
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
             const body = {
                 contents: [{ role: "user", parts: [{ text }] }],
                 generationConfig: { 
@@ -628,7 +651,7 @@
                         </div>
                         
                         <div className="flex items-center gap-6 text-xs font-bold text-gray-400">
-                            <span>Model: <span className="text-gray-900">Gemini 3</span></span>
+                            <span>Model: <span className="text-gray-900">Gemini 1.5</span></span>
                             <span>Temp: <span className="text-gray-900">{mode === 'QUICK' ? (inputs.creativity === 'Balanced' ? 0.7 : inputs.creativity === 'High' ? 0.9 : 0.4) : inputs.temp}</span></span>
                             <span className={apiKey ? "text-green-600" : "text-red-500"}>Key: {apiKey ? "Connected" : "Not Set"}</span>
                             <button onClick={clearData} className="text-gray-400 hover:text-red-600 transition-colors">Clear Data</button>
@@ -645,14 +668,46 @@
 
                                 {mode === 'BUILDER' && (
                                     <>
-                                        <div>
-                                            <div className="flex justify-between mb-2 text-xs font-bold text-gray-900 uppercase"><span>Prompt Length</span><span>{inputs.length}%</span></div>
-                                            <input type="range" min="0" max="100" value={inputs.length} onChange={e => setInputs({...inputs, length: e.target.value})} />
+                                        {/* Figma Styled Sliders */}
+                                        <div className="mb-2">
+                                            <label className="block text-sm font-bold text-gray-900 mb-4">Prompt Length</label>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                className="w-full h-1 rounded-lg appearance-none cursor-pointer"
+                                                style={{
+                                                    background: `linear-gradient(to right, #000 0%, #000 ${inputs.length}%, #E5E7EB ${inputs.length}%, #E5E7EB 100%)`
+                                                }}
+                                                value={inputs.length}
+                                                onChange={e => setInputs({...inputs, length: e.target.value})}
+                                            />
+                                            <div className="flex justify-between mt-3 text-xs text-gray-400 font-medium">
+                                                <span>Short</span>
+                                                <span className="text-gray-900 font-bold text-sm">{inputs.length}%</span>
+                                                <span>Long</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <div className="flex justify-between mb-2 text-xs font-bold text-gray-900 uppercase"><span>Creativity</span><span>{inputs.temp}</span></div>
-                                            <input type="range" min="0" max="1" step="0.1" value={inputs.temp} onChange={e => setInputs({...inputs, temp: e.target.value})} />
+
+                                        <div className="mb-2">
+                                            <label className="block text-sm font-bold text-gray-900 mb-4">Creativity (Temperature)</label>
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="1"
+                                                    step="0.1"
+                                                    className="w-full h-1 rounded-lg appearance-none cursor-pointer"
+                                                    style={{
+                                                        background: `linear-gradient(to right, #000 0%, #000 ${inputs.temp * 100}%, #E5E7EB ${inputs.temp * 100}%, #E5E7EB 100%)`
+                                                    }}
+                                                    value={inputs.temp}
+                                                    onChange={e => setInputs({...inputs, temp: e.target.value})}
+                                                />
+                                                <span className="text-sm font-bold text-gray-900 w-8 text-right">{inputs.temp}</span>
+                                            </div>
                                         </div>
+
                                         <div>
                                             <label className="block text-xs font-bold text-gray-900 uppercase mb-2">Variations</label>
                                             <input type="number" value={inputs.variations} className="w-full p-3 border border-gray-200 rounded-xl text-sm" />
@@ -824,19 +879,41 @@
             // FIXED: Use Ref for API Key Input to avoid document.getElementById
             const apiKeyInputRef = React.useRef(null);
 
-            const saveKey = (key) => {
-                if(key && key.length > 5) {
-                    localStorage.setItem('promptcraft_key', key);
-                    setApiKey(key);
+            // FIXED: Enhanced saveKey with Ref support and Shake animation
+            const saveKey = (key, inputRef = null) => {
+                const cleanKey = key ? key.trim() : '';
+
+                // Validation: Must be > 10 chars (real keys are much longer)
+                if(cleanKey.length > 10) {
+                    localStorage.setItem('promptcraft_key', cleanKey);
+                    setApiKey(cleanKey);
                     
-                    // These will now work correctly due to functional state updates
                     toggleModal('api', false);
                     toggleModal('keyManage', false); 
                     
                     audio.play('success');
                     showToast('API Key saved successfully');
+                    
+                    // Reset inputs if needed
+                    setNewKeyInput('');
                 } else {
                     audio.play('error');
+                    
+                    // Determine which element to shake (Ref or Element)
+                    let el = null;
+                    if (inputRef && inputRef.current) el = inputRef.current;
+                    else if (inputRef instanceof HTMLElement) el = inputRef;
+
+                    if (el) {
+                        el.classList.add('shake', 'border-red-500', 'ring-2', 'ring-red-500', 'bg-red-50');
+                        el.focus();
+                        
+                        setTimeout(() => {
+                            el.classList.remove('shake', 'border-red-500', 'ring-2', 'ring-red-500', 'bg-red-50');
+                        }, 500);
+                    } else {
+                        showToast('Invalid API Key format');
+                    }
                 }
             };
 
@@ -953,16 +1030,16 @@
                                         <p>2. Create a key and copy it</p>
                                         <p>3. Paste below and save</p>
                                     </div>
-                                    {/* FIXED: Use Ref */}
+                                    {/* FIXED: Added Ref */}
                                     <input 
                                         ref={apiKeyInputRef}
                                         type="password" 
                                         placeholder="Paste your API key..." 
-                                        className="w-full p-4 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none" 
+                                        className="w-full p-4 border border-gray-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none transition-all" 
                                     />
                                     <div className="flex gap-3">
                                         <Button variant="secondary" className="flex-1" onClick={() => toggleModal('api', false)}>Explore (no AI)</Button>
-                                        <Button className="flex-1" onClick={() => saveKey(apiKeyInputRef.current?.value)}>Save & Continue</Button>
+                                        <Button className="flex-1" onClick={() => saveKey(apiKeyInputRef.current?.value, apiKeyInputRef)}>Save & Continue</Button>
                                     </div>
                                 </div>
                             </div>
@@ -1060,11 +1137,12 @@
                                     <div>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-2">New Key</label>
                                         <input 
+                                            id="new-key-input"
                                             type="text" 
                                             placeholder="Paste new key..." 
                                             value={newKeyInput}
                                             onChange={(e) => setNewKeyInput(e.target.value)}
-                                            className="w-full p-4 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none placeholder-gray-400" 
+                                            className="w-full p-4 border border-gray-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-gray-900 focus:outline-none placeholder-gray-400 transition-all" 
                                         />
                                     </div>
                                 </div>
@@ -1076,7 +1154,7 @@
                                         <Button variant="secondary" onClick={() => toggleModal('keyManage', false)}>Cancel</Button>
                                         <Button 
                                             disabled={!newKeyInput}
-                                            onClick={() => saveKey(newKeyInput)}
+                                            onClick={() => saveKey(newKeyInput, document.getElementById('new-key-input'))}
                                         >
                                             Save
                                         </Button>
