@@ -11,7 +11,7 @@ The repository provides two HTML entry pages for assessment and demonstration. T
 
 Scope note: this project intentionally runs fully in the browser and does not include a backend service. All interactions, rendering, and local analysis are performed client-side, while Gemini functionality is accessed via API calls from the front end as documented in the report.
 
-Known issue during testing
+Known issue during testing：
 During our testing, we observed that even when a valid Gemini API key is provided, the generation process may occasionally fail with messages such as “generation failed” or “the model is overloaded, please try again”.
 
 This issue appears mainly during Gemini peak usage periods and is likely related to the recent release of the Gemini 3 model, which has significantly increased traffic. In most cases, no additional handling is required, as the service resumes normal responses after peak hours. Users with non-free API keys may experience fewer disruptions.
